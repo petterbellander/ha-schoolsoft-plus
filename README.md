@@ -36,6 +36,10 @@ Entity names and attributes are in Swedish, matching SchoolSoft.
 
 Schedule and assignments update every 30 minutes; lunch, assessments, absence and news every 3 hours.
 
+## Dashboard examples
+
+See [docs/cards.md](docs/cards.md) for ready-to-use cards: today's lessons, upcoming tests, open assignments, the week's lunch and alerts for absence and warnings.
+
 ## Menus as PDF or image
 
 Some schools don't publish lunch in SchoolSoft but link a weekly menu instead, often a file on Google Drive. The integration downloads it:
@@ -67,6 +71,10 @@ Copy `custom_components/schoolsoft_plus` to `config/custom_components/` and rest
 - SchoolSoft has no public API. The integration reads the same pages as the web interface and may break if SchoolSoft changes them.
 - Tested against one school. Other schools may be set up differently; please open an issue with (anonymised) examples if something isn't parsed correctly.
 - OCR requires the `tesserocr` package. It works on Home Assistant OS; on other installation types the Tesseract libraries may need to be installed separately.
+
+## AI assistance
+
+This integration was developed with an AI assistant ([Claude Code](https://claude.com/claude-code)): the code, the documentation and the dashboard examples were written by the assistant under my direction. I run it daily on my own Home Assistant installation and review the changes, but please keep this in mind and report anything that looks wrong.
 
 ## Licence
 
