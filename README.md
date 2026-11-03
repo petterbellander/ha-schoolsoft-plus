@@ -1,73 +1,73 @@
-# SchoolSoft Plus för Home Assistant
+# SchoolSoft Plus for Home Assistant
 
-En anpassad integration som hämtar information från [SchoolSoft](https://www.schoolsoft.se/) med ett vårdnadshavarkonto: schema, läxor, prov, frånvaro, nyheter och skollunch, för alla barn som är kopplade till kontot.
+A custom integration that fetches information from the Swedish school platform [SchoolSoft](https://www.schoolsoft.se/) using a guardian account: schedule, homework, tests, absence, news and school lunch, for every child linked to the account.
 
-*A Home Assistant custom integration for the Swedish school platform SchoolSoft (guardian accounts). Documentation is in Swedish since SchoolSoft is only used in Sweden.*
+## Built on kanylbullen's projects
 
-## Bygger på kanylbullens projekt
+This integration builds on two projects by [kanylbullen](https://github.com/kanylbullen):
 
-Integrationen bygger på två projekt av [kanylbullen](https://github.com/kanylbullen):
+- **[ha-schoolsoft](https://github.com/kanylbullen/ha-schoolsoft)**, the original Home Assistant integration for SchoolSoft (lunch). It served as the model for this integration.
+- **[schoolsoft-mcp](https://github.com/kanylbullen/schoolsoft-mcp)**: the client and the parsers for SchoolSoft's pages are included in `custom_components/schoolsoft_plus/vendor/` (MIT licence, see [vendor/LICENSE](custom_components/schoolsoft_plus/vendor/LICENSE)). The client has been modified to use Home Assistant's HTTP client.
 
-- **[ha-schoolsoft](https://github.com/kanylbullen/ha-schoolsoft)**, den ursprungliga Home Assistant-integrationen för SchoolSoft (lunch). Den var förebilden för den här integrationen.
-- **[schoolsoft-mcp](https://github.com/kanylbullen/schoolsoft-mcp)**: klienten och tolkarna för SchoolSofts sidor ingår i `custom_components/schoolsoft_plus/vendor/` (MIT-licens, se [vendor/LICENSE](custom_components/schoolsoft_plus/vendor/LICENSE)). Klienten är ändrad så att den använder Home Assistants HTTP-klient.
+Thanks to kanylbullen for the groundwork. The domain is `schoolsoft_plus` so it can be installed alongside ha-schoolsoft (`schoolsoft`) without conflicts.
 
-Tack till kanylbullen för grundarbetet. Domänen heter `schoolsoft_plus` så att den kan installeras bredvid ha-schoolsoft (`schoolsoft`) utan att krocka.
+## What you get
 
-## Vad du får
+Per child:
 
-Per barn:
-
-| Typ | Entitet |
+| Type | Entity |
 |---|---|
-| Kalender | Schema, Läxor och uppgifter, Prov, Lunch |
-| Sensor | Skolstart idag, Skolslut idag, Skolstart imorgon |
-| Sensor | Nästa prov (kommande prov som attribut), Öppna uppgifter |
-| Sensor | Ej anmäld frånvaro, Ämnen med varning |
-| Sensor | Lunch idag (vegetariskt alternativ och morgondagens lunch som attribut) |
-| Sensor | Senaste nyhet |
-| Sensor | Fritids hämtning idag (bara om barnet går på fritids) |
+| Calendar | Schedule, Homework and assignments, Tests, Lunch |
+| Sensor | School start today, School end today, School start tomorrow |
+| Sensor | Next test (upcoming tests as attribute), Open assignments |
+| Sensor | Unreported absence, Subjects with warnings |
+| Sensor | Lunch today (vegetarian option and tomorrow's lunch as attributes) |
+| Sensor | Latest news |
+| Sensor | After-school (fritids) pick-up today (only if the child is enrolled) |
 
-Per skola (om skolan länkar en matsedel under "Matsedel" på sidan Skolinformation):
+Per school (if the school links a menu under "Matsedel" on the School information page):
 
-| Typ | Entitet |
+| Type | Entity |
 |---|---|
-| Sensor | Veckans matsedel (veckonummer, dagarna som attribut `dagar`) |
-| Bild | Matsedel (när matsedeln är en bild) |
+| Sensor | Weekly menu (week number, days in the `dagar` attribute) |
+| Image | Menu (when the menu is an image) |
 
-Schema och uppgifter uppdateras var 30:e minut. Lunch, bedömningar, frånvaro och nyheter var tredje timme.
+Entity names and attributes are in Swedish, matching SchoolSoft.
 
-## Matsedel som PDF eller bild
+Schedule and assignments update every 30 minutes; lunch, assessments, absence and news every 3 hours.
 
-Vissa skolor har ingen lunch i SchoolSoft utan länkar en veckomatsedel, ofta en fil på Google Drive. Integrationen laddar ner den:
+## Menus as PDF or image
 
-- **PDF** tolkas som text. Både enkla upplägg ("Måndag: Köttbullar … Vegetariskt: …") och upplägg med ett tema per dag följt av "DAGENS RÄTT … VEGETARISKT …" stöds.
-- **Bild** läses med OCR (Tesseract, svensk modell). Modellen (~20 MB) laddas ner första gången till `.storage/schoolsoft_plus_tessdata`.
-- Blir OCR fel kan du under *Konfigurera* välja en **AI-uppgift** (`ai_task`-entitet) som läser bilden i stället.
+Some schools don't publish lunch in SchoolSoft but link a weekly menu instead, often a file on Google Drive. The integration downloads it:
 
-Tolkade matsedlar sparas i `.storage`, så samma fil tolkas bara en gång.
+- **PDF** is parsed as text. Both simple layouts ("Måndag: Köttbullar … Vegetariskt: …") and layouts with a theme per day followed by "DAGENS RÄTT … VEGETARISKT …" are supported.
+- **Image** is read with OCR (Tesseract, Swedish model). The model (~20 MB) is downloaded on first use to `.storage/schoolsoft_plus_tessdata`.
+- If OCR gets it wrong, you can pick an **AI Task** entity (`ai_task`) under *Configure* to read the image instead.
+
+Parsed menus are cached in `.storage`, so the same file is only parsed once.
 
 ## Installation
 
-### HACS (anpassat repo)
-1. HACS → ⋮ → *Anpassade repon* → lägg till `https://github.com/petterbellander/ha-schoolsoft-plus`, typ *Integration*.
-2. Installera **SchoolSoft Plus** och starta om Home Assistant.
+### HACS (custom repository)
+1. HACS → ⋮ → *Custom repositories* → add `https://github.com/petterbellander/ha-schoolsoft-plus`, type *Integration*.
+2. Install **SchoolSoft Plus** and restart Home Assistant.
 
-### Manuellt
-Kopiera `custom_components/schoolsoft_plus` till `config/custom_components/` och starta om.
+### Manual
+Copy `custom_components/schoolsoft_plus` to `config/custom_components/` and restart.
 
-### Konfiguration
-*Inställningar → Enheter och tjänster → Lägg till integration → SchoolSoft Plus.*
+### Configuration
+*Settings → Devices & services → Add integration → SchoolSoft Plus.*
 
-- **Skola**: delen av inloggningsadressen efter `sms.schoolsoft.se/`, t.ex. `minskola` för `https://sms.schoolsoft.se/minskola/`.
-- **Användarnamn / lösenord**: vårdnadshavarens SchoolSoft-inloggning (inte BankID).
+- **School**: the part of the login URL after `sms.schoolsoft.se/`, e.g. `myschool` for `https://sms.schoolsoft.se/myschool/`.
+- **Username / password**: the guardian's SchoolSoft login (not BankID).
 
-## Begränsningar
+## Limitations
 
-- Bara inloggning med användarnamn och lösenord för vårdnadshavare. BankID stöds inte.
-- SchoolSoft har inget öppet API. Integrationen läser samma sidor som webbgränssnittet, och kan sluta fungera om SchoolSoft ändrar dem.
-- Testad mot en skola. Andra skolor kan ha andra inställningar; öppna gärna ett ärende med (anonymiserade) exempel om något inte tolkas rätt.
-- OCR kräver paketet `tesserocr`. Det fungerar på Home Assistant OS; på andra installationer kan Tesseract-biblioteken behöva installeras separat.
+- Only guardian login with username and password. BankID is not supported.
+- SchoolSoft has no public API. The integration reads the same pages as the web interface and may break if SchoolSoft changes them.
+- Tested against one school. Other schools may be set up differently; please open an issue with (anonymised) examples if something isn't parsed correctly.
+- OCR requires the `tesserocr` package. It works on Home Assistant OS; on other installation types the Tesseract libraries may need to be installed separately.
 
-## Licens
+## Licence
 
-MIT, se [LICENSE](LICENSE). Koden i `vendor/` kommer från schoolsoft-mcp och har sin egen MIT-licens.
+MIT, see [LICENSE](LICENSE). The code in `vendor/` comes from schoolsoft-mcp and has its own MIT licence.
