@@ -1,0 +1,25 @@
+{
+  "domain": "schoolsoft_plus",
+  "name": "SchoolSoft Plus",
+  "codeowners": [
+    "@petterbellander"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/petterbellander/ha-schoolsoft-plus",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "loggers": [
+    "custom_components.schoolsoft_plus"
+  ],
+  "requirements": [
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
+    "pydantic>=2.6.0",
+    "pypdf>=4.0.0",
+    "tesserocr>=2.7.0",
+    "pillow"
+  ],
+  "version": "0.2.1",
+  "issue_tracker": "https://github.com/petterbellander/ha-schoolsoft-plus/issues"
+}

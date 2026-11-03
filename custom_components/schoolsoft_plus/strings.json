@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SchoolSoft Plus",
+        "description": "Log in with your SchoolSoft guardian account. The school is the part of the login URL after sms.schoolsoft.se/.",
+        "data": {
+          "school": "School",
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log in to SchoolSoft again",
+        "description": "Enter the password for {username}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login failed. Check school, username and password.",
+      "cannot_connect": "Could not reach SchoolSoft.",
+      "no_children": "The account has no children connected.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Logged in again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lunch menu",
+        "description": "Image menus are read with OCR (Tesseract). Optionally pick an AI Task entity to read the image instead if OCR gets it wrong.",
+        "data": {
+          "ai_task_entity": "AI Task entity for reading the menu"
+        }
+      }
+    }
+  }
+}

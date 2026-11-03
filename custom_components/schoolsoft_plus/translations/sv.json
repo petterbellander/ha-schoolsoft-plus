@@ -1,0 +1,43 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SchoolSoft Plus",
+        "description": "Logga in med ditt vårdnadshavarkonto i SchoolSoft. Skolan är delen av inloggningsadressen efter sms.schoolsoft.se/.",
+        "data": {
+          "school": "Skola",
+          "username": "Användarnamn",
+          "password": "Lösenord"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Logga in i SchoolSoft igen",
+        "description": "Ange lösenordet för {username}.",
+        "data": {
+          "password": "Lösenord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Inloggningen misslyckades. Kontrollera skola, användarnamn och lösenord.",
+      "cannot_connect": "Kunde inte nå SchoolSoft.",
+      "no_children": "Kontot har inga barn kopplade.",
+      "unknown": "Oväntat fel."
+    },
+    "abort": {
+      "already_configured": "Kontot är redan inlagt.",
+      "reauth_successful": "Inloggad igen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Matsedel",
+        "description": "Bildmatsedlar läses med OCR (Tesseract). Valfritt: välj en AI-uppgift som läser bilden i stället, om OCR blir fel.",
+        "data": {
+          "ai_task_entity": "AI-uppgift för att läsa matsedeln"
+        }
+      }
+    }
+  }
+}
