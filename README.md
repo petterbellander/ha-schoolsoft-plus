@@ -65,6 +65,8 @@ Copy `custom_components/schoolsoft_plus` to `config/custom_components/` and rest
 - **School**: the part of the login URL after `sms.schoolsoft.se/`, e.g. `myschool` for `https://sms.schoolsoft.se/myschool/`.
 - **Username / password**: the guardian's SchoolSoft login (not BankID).
 
+Don't have a username and password? See [Getting a SchoolSoft username and password](docs/login.md). You can request them yourself from your school's login page.
+
 ## Limitations
 
 - Only guardian login with username and password. BankID is not supported.
