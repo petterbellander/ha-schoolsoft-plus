@@ -26,9 +26,16 @@ MAX_MENU_BYTES = 20 * 1024 * 1024
 
 WEEKDAYS = ("mandag", "tisdag", "onsdag", "torsdag", "fredag")
 WEEKDAY_LABELS = ("Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag")
-_DAY_RE = re.compile(r"^\s*(m[åa]ndag|tisdag|onsdag|torsdag|fredag)\b[:\s]*", re.I | re.M)
+# Weekday heading, allowing OCR noise before it (e.g. "—-—D TORSDAG —").
+_DAY_RE = re.compile(
+    r"^[^A-Za-zÅÄÖåäö\n]*(?:[A-Za-zÅÄÖåäö]{1,2}\s+)?(m[åa]ndag|tisdag|onsdag|torsdag|fredag)\b[:\s]*",
+    re.I | re.M,
+)
 _WEEK_RE = re.compile(r"\b(?:v\.?|vecka|veckan?)\s*(\d{1,2})\b", re.I)
-_VEG_RE = re.compile(r"^\s*(?:vegetariskt?|veg)\s*[:\-]\s*", re.I)
+_VEG_RE = re.compile(r"^\s*(?:dagens\s+)?(?:vegetariskt?|veg)\s*[:\-]\s*", re.I)
+_MAIN_RE = re.compile(r"^\s*dagens\s+r[äa]tt\s*[:\-]\s*", re.I)
+# Bump when text parsing changes so cached PDF/OCR results are parsed again.
+PARSER_VERSION = 2
 _DRIVE_RE = re.compile(r"drive\.google\.com/(?:file/d/|open\?id=|uc\?(?:[^#]*&)?id=)([\w-]+)")
 
 
@@ -222,21 +229,29 @@ def parse_menu_text(text: str) -> tuple[int | None, dict[int, MenuDay]]:
     # parts = [preamble, day1, body1, day2, body2, ...]
     for name, body in zip(parts[1::2], parts[2::2], strict=False):
         idx = WEEKDAYS.index(name.lower().replace("å", "a"))
-        lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+        # Skip lines without a real word (dashes and other heading decoration).
+        lines = [ln.strip() for ln in body.splitlines() if re.search(r"[A-Za-zÅÄÖåäö]{2,}", ln)]
         if not lines:
             continue
-        veg = ""
+        main = veg = ""
         rest: list[str] = []
-        for ln in lines[1:]:
+        current = None  # "main" or "veg": the labelled dish a wrapped line continues
+        labelled = False  # "Dagens rätt:" seen; text after the dishes is then noise
+        for i, ln in enumerate(lines):
             if _VEG_RE.match(ln):
-                veg = _VEG_RE.sub("", ln)
-            elif veg:
+                veg, current = _VEG_RE.sub("", ln), "veg"
+            elif _MAIN_RE.match(ln):
+                main, current, labelled = _MAIN_RE.sub("", ln), "main", True
+            elif current == "main" and ln[:1].islower():
+                main += " " + ln
+            elif current == "veg" and (ln[:1].islower() or not labelled):
                 veg += " " + ln
+            elif current == "veg" and labelled:
+                continue
+            elif i == 0:
+                main = ln
             else:
                 rest.append(ln)
-        main = lines[0]
-        if _VEG_RE.match(main):
-            veg, main = _VEG_RE.sub("", main), ""
         days[idx] = MenuDay(main=main, description=" ".join(rest), vegetarian=veg)
     return week, days
 

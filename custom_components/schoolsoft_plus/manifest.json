@@ -20,6 +20,6 @@
     "tesserocr>=2.7.0",
     "pillow"
   ],
-  "version": "0.2.2",
+  "version": "0.2.3",
   "issue_tracker": "https://github.com/petterbellander/ha-schoolsoft-plus/issues"
 }

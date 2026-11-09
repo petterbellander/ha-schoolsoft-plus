@@ -189,7 +189,13 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
     async def _async_parse_menu(self, menu: SchoolMenu, *, allow_ai: bool = True) -> None:
         cache = await self._async_cache()
         hit = cache.get(menu.digest)
-        if hit:
+        # Re-parse PDF/OCR results from an older parser; AI results are kept.
+        stale = (
+            hit
+            and hit.get("parser", 1) < menu_mod.PARSER_VERSION
+            and hit.get("status") in ("tolkad från PDF", "tolkad med OCR")
+        )
+        if hit and not stale:
             days = {int(k): MenuDay(*v) for k, v in hit["days"].items()}
             self._apply_parsed(menu, hit.get("week"), days, hit.get("status", "tolkad"))
             return
@@ -220,6 +226,7 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
         cache[menu.digest] = {
             "week": week,
             "status": status,
+            "parser": menu_mod.PARSER_VERSION,
             "days": {str(k): [d.main, d.description, d.vegetarian] for k, d in days.items()},
         }
         await self._menu_store.async_save(cache)
