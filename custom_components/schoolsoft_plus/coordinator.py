@@ -55,6 +55,8 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
         self.hub = hub
         self.children = children
         self.menu: SchoolMenu | None = None
+        # Other menus listed for this week or later (e.g. next week published early).
+        self.extra_menus: list[SchoolMenu] = []
         self.menu_error: str | None = None
         self._menu_checked: dt.datetime | None = None
         self._menu_parsing = False
@@ -113,22 +115,34 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
 
     # -- school lunch menu ---------------------------------------------------------
 
+    def menu_days(self) -> dict[dt.date, MenuDay]:
+        """Days from all loaded menus; the main menu wins where weeks overlap."""
+        days: dict[dt.date, MenuDay] = {}
+        for menu in [*self.extra_menus, self.menu]:
+            if menu is not None:
+                days.update(menu.days)
+        return days
+
     def _merge_menu(self, result: dict[int, ChildData]) -> None:
-        if not self.menu or not self.menu.days:
+        days = self.menu_days()
+        if not days:
             return
-        menu_lunch = {day: item.as_lunch() for day, item in self.menu.days.items()}
+        menu_lunch = {day: item.as_lunch() for day, item in days.items()}
         for data in result.values():
             data.lunch = {**data.lunch, **menu_lunch}
 
     def menu_day(self, day: dt.date) -> MenuDay | None:
-        return self.menu.days.get(day) if self.menu else None
+        return self.menu_days().get(day)
 
     async def _async_refresh_menu(self) -> None:
         async with self.hub.lock:
             html = await self.hub.client.fetch_html(menu_mod.SCHOOL_INFO_PATH)
-        found = menu_mod.find_menu_link(html)
+        today = dt_util.now().date()
+        links = menu_mod.find_menu_links(html)
+        found = menu_mod.choose_menu_link(links, today)
         if found is None:
             raise ValueError("No menu link found under 'Matsedel' on Skolinformation")
+        await self._async_refresh_extra_menus(menu_mod.upcoming_menu_links(links, today))
         link, label = found
         new = await menu_mod.async_download(get_async_client(self.hass), link, label)
         if self.menu is not None and self.menu.digest == new.digest:
@@ -138,6 +152,26 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
             return
         self.menu = new
         await self._async_parse_menu(new)
+
+    async def _async_refresh_extra_menus(self, links: list[tuple[str, str]]) -> None:
+        known = {menu.link: menu for menu in self.extra_menus}
+        extra: list[SchoolMenu] = []
+        for link, label in links:
+            try:
+                new = await menu_mod.async_download(get_async_client(self.hass), link, label)
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("SchoolSoft menu %s could not be fetched: %s", label, err)
+                if link in known:
+                    extra.append(known[link])
+                continue
+            old = known.get(link)
+            if old is not None and old.digest == new.digest:
+                extra.append(old)
+                continue
+            # Extra weeks are read from PDF text or OCR; AI Task is used for the main menu only.
+            await self._async_parse_menu(new, allow_ai=False)
+            extra.append(new)
+        self.extra_menus = extra
 
     async def _async_cache(self) -> dict[str, Any]:
         if self._menu_cache is None:
@@ -152,7 +186,7 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
         if days and week is None:
             menu.parse_status = "veckonummer saknas"
 
-    async def _async_parse_menu(self, menu: SchoolMenu) -> None:
+    async def _async_parse_menu(self, menu: SchoolMenu, *, allow_ai: bool = True) -> None:
         cache = await self._async_cache()
         hit = cache.get(menu.digest)
         if hit:
@@ -163,7 +197,7 @@ class SchoolSoftPlusCoordinator(DataUpdateCoordinator[dict[int, ChildData]]):
             week, days = await menu_mod.async_parse_pdf(menu)
             await self._async_store(menu, week, days, "tolkad från PDF")
             self._apply_parsed(menu, week, days, "tolkad från PDF")
-        elif menu.is_image and self.config_entry.options.get(CONF_AI_TASK):
+        elif menu.is_image and allow_ai and self.config_entry.options.get(CONF_AI_TASK):
             menu.parse_status = "väntar på AI-tolkning"
             self._schedule_ai_parse()
         elif menu.is_image:

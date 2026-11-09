@@ -67,22 +67,76 @@ class SchoolMenu:
         return self.content[:4] == b"%PDF"
 
 
-def find_menu_link(html: str) -> tuple[str, str] | None:
-    """Return (url, label) for the first link after a 'matsedel' heading."""
+_MENU_RE = re.compile(r"matsedel|veckans meny|lunchmeny", re.I)
+_HTTP_RE = re.compile(r"^https?://", re.I)
+
+
+def find_menu_links(html: str) -> list[tuple[str, str]]:
+    """Return (url, label) for each menu link under a 'matsedel' heading.
+
+    Schools may list several weeks at once (e.g. last week and next week),
+    each as "Här hittar du matsedel för v. 45". The label is "v. <week>" when
+    the text next to the link names a week, otherwise "".
+    """
     soup = BeautifulSoup(html, "lxml")
-    marker = soup.find(string=re.compile(r"matsedel|veckans meny|lunchmeny", re.I))
+    marker = soup.find(string=_MENU_RE)
     if marker is None:
+        return []
+    first = marker.find_next("a", href=_HTTP_RE)
+    if first is None:
+        return []
+    container = marker.find_parent(class_="formtable")
+    anchors = container.find_all("a", href=_HTTP_RE) if container else []
+    found: list[tuple[str, str]] = []
+    for link in anchors or [first]:
+        # Text around the link, e.g. "Här hittar du matsedel för v. 43".
+        parent = link.parent
+        context = parent.get_text(" ", strip=True) if parent is not None and parent is not container else ""
+        if not context:
+            context = " ".join(s.strip() for s in link.find_all_next(string=True, limit=4) if s.strip())
+        if link is first:
+            context = f"{marker} {context}"
+        match = _WEEK_RE.search(context)
+        if match or link is first or _MENU_RE.search(context):
+            found.append((link["href"], f"v. {match.group(1)}" if match else ""))
+    return found
+
+
+def choose_menu_link(links: list[tuple[str, str]], today: dt.date) -> tuple[str, str] | None:
+    """Pick the menu for the week of the next school day (today, or Monday on weekends).
+
+    If that week isn't listed, take the latest week; links without a week
+    number are only used when no link has one.
+    """
+    if not links:
         return None
-    link = marker.find_next("a", href=re.compile(r"^https?://", re.I))
-    if link is None:
-        return None
-    # Text around the link, e.g. "Här hittar du matsedel för v. 43".
-    context = " ".join(
-        s.strip() for s in [str(marker), *link.find_all_next(string=True, limit=4)] if s.strip()
-    )
-    match = _WEEK_RE.search(context)
-    label = f"v. {match.group(1)}" if match else ""
-    return link["href"], label
+    school_day = today + dt.timedelta(days=7 - today.weekday() if today.weekday() >= 5 else 0)
+    target = school_day - dt.timedelta(days=school_day.weekday())
+    dated = []
+    for link, label in links:
+        match = _WEEK_RE.search(label)
+        if match and 1 <= int(match.group(1)) <= 53:
+            dated.append((week_monday(int(match.group(1)), today), (link, label)))
+    if not dated:
+        return links[0]
+    for monday, item in dated:
+        if monday == target:
+            return item
+    return max(dated, key=lambda d: d[0])[1]
+
+
+def upcoming_menu_links(links: list[tuple[str, str]], today: dt.date) -> list[tuple[str, str]]:
+    """Links for this week and later weeks, other than the one choose_menu_link picks."""
+    this_monday = today - dt.timedelta(days=today.weekday())
+    chosen = choose_menu_link(links, today)
+    extra = []
+    for link, label in links:
+        match = _WEEK_RE.search(label)
+        if (link, label) == chosen or not match or not 1 <= int(match.group(1)) <= 53:
+            continue
+        if week_monday(int(match.group(1)), today) >= this_monday:
+            extra.append((link, label))
+    return extra
 
 
 def download_url(link: str) -> str:

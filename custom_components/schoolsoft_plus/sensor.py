@@ -330,6 +330,6 @@ class MenuSensor(SchoolSoftSchoolEntity, SensorEntity):
                     "beskrivning": item.description,
                     "vegetariskt": item.vegetarian,
                 }
-                for day, item in sorted(menu.days.items())
+                for day, item in sorted(self.coordinator.menu_days().items())
             ],
         }
